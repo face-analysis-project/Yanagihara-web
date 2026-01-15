@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>柳原法 Eval</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="menu-view" class="container">
+        <h1>柳原法 評価項目選択</h1>
+        <p class="description" style="text-align: center;">
+            評価したい項目を選択してください。<br>
+            <span style="font-size: 0.8em; color: #888;">作成日: 2026/1/15</span>
+        </p>
+        
+        <div class="menu-grid">
+            <button class="menu-item" data-mode="rest">安静時</button>
+            <button class="menu-item" data-mode="wrinkle">額のしわ寄せ</button>
+            <button class="menu-item" data-mode="blink-light">軽い閉眼</button>
+            <button class="menu-item" data-mode="blink-heavy">強い閉眼</button>
+            <button class="menu-item" data-mode="wink">片目つぶり</button>
+            <button class="menu-item" data-mode="nose">鼻翼を動かす</button>
+            <button class="menu-item" data-mode="cheek">頬をふくらます</button>
+            <button class="menu-item" data-mode="whistle">口笛</button>
+            <button class="menu-item" data-mode="eee">イーと歯を見せる</button>
+            <button class="menu-item" data-mode="henoji">口をへの字に</button>
+            <button class="menu-item special" data-mode="all">全ての項目</button>
+        </div>
+    </div>
+
+    <div id="instruction-view" class="container hidden">
+        <div class="header-row">
+            <button id="btn-inst-back" class="small-btn">← 戻る</button>
+            <h1>安静時評価の手順</h1>
+        </div>
+
+        <div class="instruction-content">
+            <div class="step-card">
+                <h3>STEP 1</h3>
+                <p>真正面を向き、カメラに顔を向けます。</p>
+            </div>
+            <div class="step-card">
+                <h3>STEP 2</h3>
+                <p>画面に表示される<span class="highlight">緑の枠</span>に顔の輪郭を合わせます。</p>
+            </div>
+            <div class="step-card">
+                <h3>STEP 3</h3>
+                <p>顔の力を抜き、リラックスした状態で「撮影」ボタンを押してください。</p>
+            </div>
+        </div>
+
+        <button id="btn-start-camera" class="action-btn">カメラを起動する</button>
+    </div>
+
+    <div id="eval-view" class="container hidden">
+        <div class="header-row">
+            <button id="btn-back" class="small-btn">中断して戻る</button>
+            <h1 id="current-title">安静時評価</h1>
+            <button id="btn-switch-camera" class="small-btn" style="margin-left:auto;">📷 切替</button>
+        </div>
+        
+        <div class="camera-wrapper">
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="output_canvas"></canvas>
+            
+            <div class="face-guide-overlay"></div>
+            <div id="countdown-overlay" class="hidden">3</div>
+            </div>
+
+        <div class="controls">
+            <p id="status">ガイド枠に顔を合わせてください</p>
+            <button id="btn-action" disabled>撮影・解析</button>
+        </div>
+    </div>
+
+    <div id="result-view" class="container hidden">
+        <div class="header-row">
+            <button id="btn-retry" class="small-btn">← 再撮影</button>
+            <h1>評価結果</h1>
+        </div>
+
+        <div class="result-image-box">
+            <img id="result-img" src="" alt="Captured Face">
+        </div>
+
+        <div class="score-panel">
+            <div>総合スコア (平均)</div>
+            <div class="total-score" id="result-score">0</div>
+            
+            <table class="score-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>計測値</th>
+                        <th>点数</th>
+                    </tr>
+                </thead>
+                <tbody id="result-details">
+                </tbody>
+            </table>
+        </div>
+
+        <button id="btn-home" class="action-btn btn-home">評価選択画面に戻る</button>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+/* 全体の設定 */
+body {
+    margin: 0;
+    background-color: #1a1a1a; /* ダークモード背景 */
+    color: white;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 水平方向中央揃え */
+    min-height: 100vh;
+}
+
+h1 {
+    font-size: 1.2rem;
+    margin: 15px 0;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px; /* PCで見ても広がりすぎないように */
+    padding: 0 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+.camera-wrapper {
+    position: relative; /* 子要素の基準点になる */
+    width: 100%;
+    /* アスペクト比を固定する（スマホの縦長でも崩れないように） */
+    /* ここでは仮に 4:3 や 16:9 になるように高さを自動調整させてもいいですが、
+       シンプルに「幅いっぱい、高さは自動」にします */
+    aspect-ratio: 16 / 9; /* PC/スマホ横向き想定 */
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+
+video, canvas {
+    position: absolute; /* 親(wrapper)の左上を基準に張り付く */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* これが重要！無理やり引き伸ばさず、黒帯を出してでも比率を守る */
+    object-fit: contain; 
+    
+    transform: scaleX(-1); /* 鏡反転 */
+}
+
+/* === ボタン周り === */
+
+.controls {
+    width: 100%;
+    text-align: center;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(0,123,255, 0.4);
+    transition: transform 0.1s;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+button:disabled {
+    background: #555;
+    color: #888;
+    box-shadow: none;
+}
+
+/* 表示切り替え用ユーティリティ */
+.hidden {
+    display: none !important;
+}
+
+/* ヘッダー周り（戻るボタン用） */
+.header-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.header-row h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    flex-grow: 1;
+    text-align: center;
+}
+
+/* 小さめのボタン（戻るボタンなど） */
+.small-btn {
+    background: #444;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    box-shadow: none;
+}
+
+/* === メニュー画面のデザイン === */
+
+.description {
+    color: #ccc;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2列表示 */
+    gap: 15px;
+    width: 100%;
+}
+
+.menu-item {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 20px 10px;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    transition: all 0.2s;
+    /* ボタンのリセット */
+    width: auto; 
+}
+
+.menu-item:hover {
+    background: #444;
+    transform: translateY(-2px);
+}
+
+.menu-item:active {
+    transform: scale(0.98);
+}
+
+/* 安静時だけ目立たせる（実装済みアピール） */
+.menu-item[data-mode="rest"] {
+    background: #007bff;
+    border-color: #007bff;
+    font-weight: bold;
+}
+
+.menu-item.special {
+    grid-column: 1 / -1; 
+    margin-bottom: 10px; 
+    
+}
+
+/* === 説明画面のデザイン === */
+.instruction-content {
+    width: 100%;
+    margin: 20px 0;
+}
+
+.step-card {
+    background: #333;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #007bff; /* 左に青い線でアクセント */
+}
+
+.step-card h3 {
+    margin: 0 0 5px 0;
+    font-size: 1rem;
+    color: #007bff;
+}
+
+.step-card p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.highlight {
+    color: #00ff00; /* 緑色で強調 */
+    font-weight: bold;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+}
+.action-btn:hover {
+    background-color: #0056b3;
+}
+
+
+/* === 2. 結果画面のデザイン (新規追加) === */
+.result-image-box {
+    width: 100%;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #444;
+}
+
+.result-image-box img {
+    width: 100%;
+    display: block;
+}
+
+.score-panel {
+    background: #333;
+    padding: 20px;
+    border-radius: 12px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.total-score {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #007bff;
+    margin: 10px 0;
+}
+
+.score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 0.95rem;
+}
+
+.score-table th, .score-table td {
+    padding: 8px;
+    border-bottom: 1px solid #555;
+    text-align: left;
+}
+.score-table th { color: #aaa; font-weight: normal; }
+.score-table td:last-child { text-align: right; font-weight: bold; }
+
+/* 評価方法選択に戻るボタン */
+.btn-home {
+    background-color: #555;
+    margin-top: 10px;
+}
+
+/* style.css */
+
+/* === カメラ枠のサイズ調整 === */
+.camera-wrapper {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    
+    /* PCでは 16:9 のまま */
+    aspect-ratio: 16 / 9;
+}
+
+
+/* スマホ縦持ち（ポートレート）のときは縦長にする */
+@media (orientation: portrait) {
+    .camera-wrapper {
+        aspect-ratio: 3 / 4;
+        max-height: 60vh;
+    }
+}
+
+video, canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* ▼ 変更: contain(黒帯あり) から cover(枠いっぱいに拡大) に変更 */
+    object-fit: cover; 
+    
+    transform: scaleX(-1);
+}
+
+
+/* === カメラ上のガイド枠 (Face Guide) === */
+.face-guide-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* ど真ん中に配置 */
+    
+    width: 55%;
+    height: 65%;
+
+    border: 3px dashed rgba(0, 255, 0, 0.7); /* 半透明の緑の点線 */
+    border-radius: 50%; /* 楕円 */
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2); /* ぼんやり光らせる */
+    pointer-events: none; /* これがあっても下のボタンなどをクリックできるようにする */
+    z-index: 10; /* videoより手前に */
+}
+
+
+/* === カウントダウンのデザイン === */
+#countdown-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8rem; /* めっちゃ大きく */
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 20px rgba(0,0,0,0.5);
+    z-index: 50;
+    pointer-events: none;
+}
+
+#webcam {
+    transform: scaleX(-1); 
+}
+
+#webcam.normal-view {
+    transform: scaleX(1) !important;
+}
+
+/* 非表示用クラス */
+.hidden {
+    display: none;
+}
