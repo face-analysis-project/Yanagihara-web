@@ -10,10 +10,7 @@
 
     <div id="menu-view" class="container">
         <h1>柳原法 評価項目選択</h1>
-        <p class="description" style="text-align: center;">
-            評価したい項目を選択してください。<br>
-            <span style="font-size: 0.8em; color: #888;">作成日: 2026/1/15</span>
-        </p>
+        <p class="description">評価したい項目を選択してください。</p>
         
         <div class="menu-grid">
             <button class="menu-item" data-mode="rest">安静時</button>
@@ -33,7 +30,7 @@
     <div id="instruction-view" class="container hidden">
         <div class="header-row">
             <button id="btn-inst-back" class="small-btn">← 戻る</button>
-            <h1>安静時評価の手順</h1>
+            <h1 id="instruction-title">安静時評価の手順</h1>
         </div>
 
         <div class="instruction-content">
@@ -66,6 +63,7 @@
             <canvas id="output_canvas"></canvas>
             
             <div class="face-guide-overlay"></div>
+            <div class="eye-guide-overlay hidden"></div>
             <div id="countdown-overlay" class="hidden">3</div>
             </div>
 
@@ -83,6 +81,17 @@
 
         <div class="result-image-box">
             <img id="result-img" src="" alt="Captured Face">
+
+            <div id="wink-result-box" class="wink-result-box hidden">
+                <div class="wink-result-col">
+                    <div class="wink-result-label">右目</div>
+                    <img id="result-img-right" src="" alt="Right Wink">
+                </div>
+                <div class="wink-result-col">
+                    <div class="wink-result-label">左目</div>
+                    <img id="result-img-left" src="" alt="Left Wink">
+                </div>
+            </div>
         </div>
 
         <div class="score-panel">

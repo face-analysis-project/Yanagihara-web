@@ -148,8 +148,14 @@ button:disabled {
     transform: scale(0.98);
 }
 
-/* 安静時だけ目立たせる（実装済みアピール） */
-.menu-item[data-mode="rest"] {
+/* 実装済み項目を目立たせる */
+.menu-item[data-mode="rest"],
+.menu-item[data-mode="eee"],
+.menu-item[data-mode="cheek"],
+.menu-item[data-mode="whistle"],
+.menu-item[data-mode="blink-light"],
+.menu-item[data-mode="blink-heavy"],
+.menu-item[data-mode="wink"] {
     background: #007bff;
     border-color: #007bff;
     font-weight: bold;
@@ -221,6 +227,37 @@ button:disabled {
 .result-image-box img {
     width: 100%;
     display: block;
+}
+
+/* === ウィンク結果: 右/左 2枚表示 === */
+.wink-result-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+}
+
+.wink-result-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wink-result-label {
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.wink-result-box img {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+}
+
+@media (max-width: 420px) {
+    .wink-result-box {
+        grid-template-columns: 1fr;
+    }
 }
 
 .score-panel {
@@ -315,6 +352,31 @@ video, canvas {
     z-index: 10; /* videoより手前に */
 }
 
+/* === 目用ガイド枠 (横長) === */
+.eye-guide-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* ど真ん中に配置 */
+    
+    width: 80%;
+    height: 20%;
+
+    border: 3px dashed rgba(0, 255, 0, 0.7); /* 半透明の緑の点線 */
+    border-radius: 50%; /* 楕円 */
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2); /* ぼんやり光らせる */
+    pointer-events: none; /* これがあっても下のボタンなどをクリックできるようにする */
+    z-index: 10; /* videoより手前に */
+}
+
+@media (orientation: portrait) {
+    .eye-guide-overlay {
+        top: 28%;
+        width: 88%;
+        height: 18%;
+    }
+}
+
 
 /* === カウントダウンのデザイン === */
 #countdown-overlay {
@@ -335,6 +397,10 @@ video, canvas {
 }
 
 #webcam.normal-view {
+    transform: scaleX(1) !important;
+}
+
+#output_canvas.normal-view {
     transform: scaleX(1) !important;
 }
 
