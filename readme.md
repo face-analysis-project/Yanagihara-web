@@ -263,5 +263,6 @@ python3 -m http.server 8000
 
 - 2026/01/15: 安静時評価、外カメラ対応、自動水平補正の追加
 - 2026/01/20: 7項目（rest / blink-light / blink-heavy / wink / cheek / whistle / eee）の実装とREADME更新
+- 2026/01/22: README更新
 
 ---
