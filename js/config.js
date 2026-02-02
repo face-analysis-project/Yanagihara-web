@@ -43,6 +43,10 @@ export const CFG = {
     THRESH_WRINKLE_RATIO_4: 70,
     THRESH_WRINKLE_RATIO_2: 30,
 
+    // 鼻翼を動かす（Nose）: 拡張距離(mm) 閾値
+    THRESH_NOSE_MM_4: 1.5,
+    THRESH_NOSE_MM_2: 0.5,
+
     // ランドマークID (MediaPipe Face Mesh)
     ID: {
         EYE_L: 33, EYE_R: 263,      // 目尻
@@ -52,6 +56,9 @@ export const CFG = {
         // 仕様上は 1 または 168 を想定。デフォルトは 168。
         NOSE_CENTER: 168,
         NOSE_CENTER_ALT: 1,
+        NOSE_TIP: 1,
+        NOSE_WING_L: 49,
+        NOSE_WING_R: 279,
 
         // 頬（ふくらみを見たい点）
         // 234/454 は目尻寄りに感じやすいので、頬中央寄りの点をデフォルトにする
