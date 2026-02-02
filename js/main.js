@@ -538,6 +538,9 @@ btnStartCamera.onclick = () => {
     // ガイド枠切り替え
     setGuideOverlayMode(currentMode);
 
+    // 前の計測結果の残像を消す
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     updateAllProgress();
     
     // カメラは init() で既に動いているので、ここではステータス更新のみ

@@ -165,7 +165,8 @@ button:disabled {
 .menu-item[data-mode="whistle"],
 .menu-item[data-mode="blink-light"],
 .menu-item[data-mode="blink-heavy"],
-.menu-item[data-mode="wink"] {
+.menu-item[data-mode="wink"],
+.menu-item[data-mode="all"] {
     background: #007bff;
     border-color: #007bff;
     font-weight: bold;
