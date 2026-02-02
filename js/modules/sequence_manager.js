@@ -17,13 +17,15 @@ export class SequenceManager {
         return this.steps[this.currentStepIndex] ?? null;
     }
 
-    record(score) {
+    record(result) {
         const step = this.currentStep();
         if (!step) return;
         this.results[this.currentStepIndex] = {
             id: step.id,
             name: step.name,
-            score
+            score: result?.score ?? 0,
+            details: result?.details ?? [],
+            images: result?.images ?? []
         };
     }
 

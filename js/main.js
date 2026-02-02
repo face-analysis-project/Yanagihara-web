@@ -11,6 +11,7 @@ import { WrinkleEvaluator } from './modules/eval_wrinkle.js';
 import { NoseEvaluator } from './modules/eval_nose.js';
 import { HenojiEvaluator } from './modules/eval_henoji.js';
 import { SequenceManager } from './modules/sequence_manager.js';
+import { PdfGenerator } from './modules/pdf_generator.js';
 
 // === DOM要素の取得 ===
 const menuView = document.getElementById('menu-view');
@@ -44,6 +45,8 @@ const finalView = document.getElementById('final-view');
 const finalTotal = document.getElementById('final-total');
 const finalDetails = document.getElementById('final-details');
 const btnFinalHome = document.getElementById('btn-final-home');
+const btnPdf = document.getElementById('btn-pdf');
+const pdfRoot = document.getElementById('pdf-root');
 
 // ウィンク結果表示用
 const winkResultBox = document.getElementById('wink-result-box');
@@ -220,6 +223,7 @@ const ALL_STEPS = [
 ];
 
 const sequenceManager = new SequenceManager(ALL_STEPS);
+const pdfGenerator = new PdfGenerator(pdfRoot);
 
 function isAllModeActive() {
     return sequenceManager?.active === true;
@@ -250,6 +254,25 @@ function updateResultButtons() {
         btnNext.classList.add('hidden');
         btnHome.classList.remove('hidden');
     }
+}
+
+function collectResultDetails() {
+    if (!resultDetails) return [];
+    const rows = Array.from(resultDetails.querySelectorAll('tr'));
+    return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent?.trim() ?? '');
+        return cells.filter(Boolean).join(' ');
+    });
+}
+
+function collectResultImages() {
+    if (currentMode === 'wink') {
+        const imgs = [];
+        if (resultImgRight?.src) imgs.push(resultImgRight.src);
+        if (resultImgLeft?.src) imgs.push(resultImgLeft.src);
+        return imgs;
+    }
+    return resultImg?.src ? [resultImg.src] : [];
 }
 
 function startAllMode() {
@@ -2370,7 +2393,11 @@ if (btnNext) {
         if (!isAllModeActive()) return;
 
         const score = Number.parseInt(resultScore.innerText, 10) || 0;
-        sequenceManager.record(score);
+        sequenceManager.record({
+            score,
+            details: collectResultDetails(),
+            images: collectResultImages()
+        });
 
         const nextStep = sequenceManager.next();
         if (nextStep) {
@@ -2413,6 +2440,13 @@ if (btnFinalHome) {
         resetWinkState();
         setResultViewMode('single');
         updateAllProgress();
+    };
+}
+
+if (btnPdf) {
+    btnPdf.onclick = () => {
+        const total = sequenceManager.totalScore();
+        pdfGenerator.generateReport(sequenceManager.results, total);
     };
 }
 

@@ -225,6 +225,15 @@ button:disabled {
 .btn-next {
     background-color: #00a3ff;
 }
+
+.pdf-root {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 794px; /* A4 96dpi */
+    background: white;
+    color: #111;
+}
 .action-btn:hover {
     background-color: #0056b3;
 }
