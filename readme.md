@@ -21,7 +21,7 @@ Google MediaPipe Tasks Vision（Face Landmarker）で顔ランドマークを検
 - **通し評価（all）実装済み**
     - 10項目を順番に測定し、合計スコアと内訳を表示
 - **PDFレポート出力（非表示）**
-    - 実装は残していますが、UIからは非表示にしています
+    - 実装は残していますが、UIからは非表示にしています。現在開発中
 
 ## ✨ 主な機能（共通基盤）
 
@@ -59,7 +59,7 @@ Google MediaPipe Tasks Vision（Face Landmarker）で顔ランドマークを検
 - blink-light / blink-heavy: 目の上下瞼距離が **最小** のフレームをClosedとして採用
 - wink: 対象目のみ、上記と同様（2ステップで右→左）
 
-## 🧪 実装済み評価（7項目）
+## 🧪 実装済み評価（10項目）
 
 以降は「何を計測して、どの閾値で採点しているか」をコード準拠で記載します。
 採点閾値は `js/config.js` の `CFG.THRESH_*` が唯一の真実です。
@@ -256,19 +256,6 @@ Max抽出（`performCheekCapture()`）:
 調整の入口は基本的に `js/config.js` です。
 （特に頬・口笛は、健常者での実測に合わせて暫定チューニングが入っています）
 
-## 🚀 開発・実行方法
-
-ES Modules を使っているため、`index.html` をファイル直開きではなくローカルサーバで配信するのが安全です。
-またカメラ取得の都合で、`https` もしくは `localhost` が推奨です。
-
-例（Python）:
-
-```bash
-python3 -m http.server 8000
-```
-
-ブラウザで `http://localhost:8000/` を開きます。
-
 ## 💻 技術スタック
 
 - Frontend: HTML5, CSS3, JavaScript (ES6 Modules)
@@ -288,12 +275,12 @@ python3 -m http.server 8000
         ├── main.js
         ├── utils.js
         └── modules/
-                ├── eval_rest.js
-                ├── eval_light_close.js
-                ├── eval_wink.js
-                ├── eval_cheek.js
-                ├── eval_whistle.js
-                ├── eval_mouth_corner.js  # eee
+            ├── eval_rest.js
+            ├── eval_light_close.js
+            ├── eval_wink.js
+            ├── eval_cheek.js
+            ├── eval_whistle.js
+            ├── eval_mouth_corner.js
             ├── eval_wrinkle.js
             ├── eval_nose.js
             ├── eval_henoji.js
