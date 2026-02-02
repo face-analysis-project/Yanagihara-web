@@ -117,6 +117,29 @@ button:disabled {
     box-shadow: none;
 }
 
+@media (max-width: 480px) {
+    .header-row {
+        flex-wrap: wrap;
+        gap: 6px 8px;
+    }
+
+    .header-row h1 {
+        flex-basis: 100%;
+        order: 2;
+        text-align: left;
+        font-size: 1rem;
+    }
+
+    .all-progress {
+        flex-basis: 100%;
+        order: 3;
+        text-align: left;
+        white-space: normal;
+        margin-left: 0;
+        margin-top: 2px;
+    }
+}
+
 /* === メニュー画面のデザイン === */
 
 .description {
