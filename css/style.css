@@ -150,6 +150,7 @@ button:disabled {
 
 /* 実装済み項目を目立たせる */
 .menu-item[data-mode="rest"],
+.menu-item[data-mode="wrinkle"],
 .menu-item[data-mode="eee"],
 .menu-item[data-mode="cheek"],
 .menu-item[data-mode="whistle"],
