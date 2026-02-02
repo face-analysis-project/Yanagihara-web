@@ -285,7 +285,7 @@ Max抽出（`performCheekCapture()`）:
             ├── eval_nose.js
             ├── eval_henoji.js
             ├── sequence_manager.js
-            └── pdf_generator.js
+            └── pdf_generator.js (開発中)
 ```
 
 ## ⚠️ 免責事項 (Disclaimer)
