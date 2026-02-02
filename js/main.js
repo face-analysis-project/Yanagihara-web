@@ -9,6 +9,8 @@ import { WhistleEvaluator } from './modules/eval_whistle.js';
 import { CheekEvaluator } from './modules/eval_cheek.js';
 import { WrinkleEvaluator } from './modules/eval_wrinkle.js';
 import { NoseEvaluator } from './modules/eval_nose.js';
+import { HenojiEvaluator } from './modules/eval_henoji.js';
+import { SequenceManager } from './modules/sequence_manager.js';
 
 // === DOM要素の取得 ===
 const menuView = document.getElementById('menu-view');
@@ -29,6 +31,7 @@ const btnAction = document.getElementById('btn-action');
 const btnBack = document.getElementById('btn-back');
 const btnRetry = document.getElementById('btn-retry');
 const btnHome = document.getElementById('btn-home');
+const btnNext = document.getElementById('btn-next');
 const instructionTitle = document.getElementById('instruction-title');
 
 // 結果表示用
@@ -36,6 +39,11 @@ const resultImg = document.getElementById('result-img');
 const resultScore = document.getElementById('result-score');
 const resultDetails = document.getElementById('result-details');
 const countdownOverlay = document.getElementById('countdown-overlay');
+const allProgressEls = document.querySelectorAll('.all-progress');
+const finalView = document.getElementById('final-view');
+const finalTotal = document.getElementById('final-total');
+const finalDetails = document.getElementById('final-details');
+const btnFinalHome = document.getElementById('btn-final-home');
 
 // ウィンク結果表示用
 const winkResultBox = document.getElementById('wink-result-box');
@@ -195,7 +203,89 @@ const evaluators = {
     'cheek': new CheekEvaluator(),
     'wrinkle': new WrinkleEvaluator(),
     'nose': new NoseEvaluator(),
+    'henoji': new HenojiEvaluator(),
 };
+
+const ALL_STEPS = [
+    { id: 'rest', name: '安静時' },
+    { id: 'wrinkle', name: '額のしわ寄せ' },
+    { id: 'blink-light', name: '軽い閉眼' },
+    { id: 'blink-heavy', name: '強い閉眼' },
+    { id: 'wink', name: '片目つぶり' },
+    { id: 'nose', name: '鼻翼を動かす' },
+    { id: 'cheek', name: '頬をふくらます' },
+    { id: 'whistle', name: '口笛' },
+    { id: 'eee', name: 'イーと歯を見せる' },
+    { id: 'henoji', name: '口をへの字にする' }
+];
+
+const sequenceManager = new SequenceManager(ALL_STEPS);
+
+function isAllModeActive() {
+    return sequenceManager?.active === true;
+}
+
+function updateAllProgress() {
+    if (!allProgressEls) return;
+    if (!isAllModeActive()) {
+        allProgressEls.forEach(el => el.classList.add('hidden'));
+        return;
+    }
+    const step = sequenceManager.currentStep();
+    const idx = sequenceManager.currentStepIndex + 1;
+    const total = ALL_STEPS.length;
+    const text = step ? `STEP ${idx}/${total} : ${step.name}` : '';
+    allProgressEls.forEach(el => {
+        el.textContent = text;
+        el.classList.remove('hidden');
+    });
+}
+
+function updateResultButtons() {
+    if (!btnNext || !btnHome) return;
+    if (isAllModeActive()) {
+        btnNext.classList.remove('hidden');
+        btnHome.classList.add('hidden');
+    } else {
+        btnNext.classList.add('hidden');
+        btnHome.classList.remove('hidden');
+    }
+}
+
+function startAllMode() {
+    const step = sequenceManager.start();
+    if (!step) return;
+    setResultViewMode('single');
+    resetWinkState();
+    if (finalView) finalView.classList.add('hidden');
+    showInstruction(step.id);
+    updateAllProgress();
+}
+
+function showFinalResults() {
+    if (!finalView || !finalTotal || !finalDetails) return;
+
+    const total = sequenceManager.totalScore();
+    finalTotal.innerText = `${total} / 40`;
+
+    finalDetails.innerHTML = '';
+    sequenceManager.results.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx + 1}. ${r.name}</td><td>${r.score} 点</td>`;
+        finalDetails.appendChild(tr);
+    });
+
+    const totalRow = document.createElement('tr');
+    totalRow.innerHTML = `<td><strong>合計</strong></td><td><strong>${total} 点</strong></td>`;
+    finalDetails.appendChild(totalRow);
+
+    menuView.classList.add('hidden');
+    instructionView.classList.add('hidden');
+    evalView.classList.add('hidden');
+    resultView.classList.add('hidden');
+    finalView.classList.remove('hidden');
+    allProgressEls.forEach(el => el.classList.add('hidden'));
+}
 
 const MODE_UI = {
     rest: {
@@ -233,6 +323,15 @@ const MODE_UI = {
             '口は閉じたまま行ってください。'
         ],
         evalTitle: '鼻翼を動かす評価'
+    },
+    henoji: {
+        instructionTitle: '口をへの字にする評価の手順',
+        stepTexts: [
+            '「3・2・1」のカウントダウンのあと、',
+            '口の両端を下に引いて「不満がある顔」を作ってください。',
+            '下の歯が見えるくらい、口角を首の方へ引き下げてください。'
+        ],
+        evalTitle: '口をへの字にする評価'
     },
     whistle: {
         instructionTitle: '口笛（口をすぼめる）評価の手順',
@@ -375,10 +474,10 @@ function setupMenu() {
         btn.onclick = () => {
             const mode = btn.dataset.mode;
             
-            if (mode === 'rest' || mode === 'eee' || mode === 'whistle' || mode === 'cheek' || mode === 'blink-light' || mode === 'blink-heavy' || mode === 'wink' || mode === 'wrinkle' || mode === 'nose') {
+            if (mode === 'rest' || mode === 'eee' || mode === 'whistle' || mode === 'cheek' || mode === 'blink-light' || mode === 'blink-heavy' || mode === 'wink' || mode === 'wrinkle' || mode === 'nose' || mode === 'henoji') {
                 showInstruction(mode);
             } else if (mode === 'all') {
-                alert("開発中: 通し評価モード");
+                startAllMode();
             } else {
                 alert("開発中: その他のモード");
             }
@@ -401,6 +500,7 @@ function showInstruction(mode) {
 
     menuView.classList.add('hidden');
     instructionView.classList.remove('hidden');
+    updateAllProgress();
 }
 
 // 説明画面：「戻る」
@@ -411,6 +511,10 @@ btnInstBack.onclick = () => {
     setGuideOverlayMode(null);
     resetWinkState();
     setResultViewMode('single');
+    if (isAllModeActive()) {
+        sequenceManager.cancel();
+        updateAllProgress();
+    }
 };
 
 // 説明画面：「カメラを起動する(次へ)」
@@ -433,6 +537,8 @@ btnStartCamera.onclick = () => {
 
     // ガイド枠切り替え
     setGuideOverlayMode(currentMode);
+
+    updateAllProgress();
     
     // カメラは init() で既に動いているので、ここではステータス更新のみ
     btnAction.disabled = false;
@@ -458,6 +564,10 @@ btnBack.onclick = () => {
     setGuideOverlayMode(null);
     resetWinkState();
     setResultViewMode('single');
+    if (isAllModeActive()) {
+        sequenceManager.cancel();
+        updateAllProgress();
+    }
 };
 
 // === 4. ループ処理 (推論のみ、描画なし) ===
@@ -518,6 +628,8 @@ btnAction.onclick = () => {
             performWrinkleCapture();
         } else if (currentMode === 'nose') {
             performNoseCapture();
+        } else if (currentMode === 'henoji') {
+            performHenojiCapture();
         } else if (currentMode === 'whistle') {
             performWhistleCapture();
         } else if (currentMode === 'cheek') {
@@ -680,6 +792,43 @@ function drawNoseTrackingDots(landmarks) {
     ctx.fillStyle = 'white';
     ctx.beginPath();
     ctx.arc(tip.x, tip.y, 4, 0, 2 * Math.PI);
+    ctx.fill();
+}
+
+function drawHenojiTrackingDots(landmarks) {
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    if (!landmarks) return;
+
+    const mouthL = getCoord(landmarks, CFG.ID.MOUTH_L, w, h);
+    const mouthR = getCoord(landmarks, CFG.ID.MOUTH_R, w, h);
+    const eyeL = getCoord(landmarks, CFG.ID.EYE_R_INNER, w, h);
+    const eyeR = getCoord(landmarks, CFG.ID.EYE_L_INNER, w, h);
+
+    const drawOne = (p, fill, stroke) => {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 7, 0, 2 * Math.PI);
+        ctx.fill();
+
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 9, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+    };
+
+    drawOne(mouthL, 'red', 'yellow');
+    drawOne(mouthR, 'red', 'yellow');
+
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(eyeL.x, eyeL.y, 4, 0, 2 * Math.PI);
+    ctx.arc(eyeR.x, eyeR.y, 4, 0, 2 * Math.PI);
     ctx.fill();
 }
 
@@ -854,6 +1003,28 @@ function calcBrowElevMetricPx(landmarks, width, height) {
 
     const distL = eyeL.y - browL.y;
     const distR = eyeR.y - browR.y;
+    return (distL + distR) / 2;
+}
+
+function calcHenojiMetricPx(landmarks, width, height) {
+    const il = landmarks[CFG.ID.IRIS_L_CENTER];
+    const ir = landmarks[CFG.ID.IRIS_R_CENTER];
+    if (!il || !ir) return null;
+
+    const ix1 = il.x * width; const iy1 = il.y * height;
+    const ix2 = ir.x * width; const iy2 = ir.y * height;
+    const cx = (ix1 + ix2) / 2;
+    const cy = (iy1 + iy2) / 2;
+    const angleRad = Math.atan2(iy2 - iy1, ix2 - ix1);
+    const origin = { x: cx, y: cy };
+
+    const mouthL = rotatePoint(getCoord(landmarks, CFG.ID.MOUTH_L, width, height), origin, -angleRad);
+    const mouthR = rotatePoint(getCoord(landmarks, CFG.ID.MOUTH_R, width, height), origin, -angleRad);
+    const eyeL = rotatePoint(getCoord(landmarks, CFG.ID.EYE_R_INNER, width, height), origin, -angleRad);
+    const eyeR = rotatePoint(getCoord(landmarks, CFG.ID.EYE_L_INNER, width, height), origin, -angleRad);
+
+    const distL = mouthL.y - eyeL.y;
+    const distR = mouthR.y - eyeR.y;
     return (distL + distR) / 2;
 }
 
@@ -1070,6 +1241,77 @@ async function performNoseCapture() {
 
         const bitmap = bmpPromise ? await bmpPromise : await captureVideoFrameBitmap(video, w, h);
         await renderNoseResult(bitmap, rest, max);
+
+    } finally {
+        isMeasuring = false;
+        btnBack.disabled = false;
+        btnSwitchCamera.disabled = false;
+        btnAction.disabled = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        status.innerText = 'ガイド枠に顔を合わせてください';
+    }
+}
+
+async function performHenojiCapture() {
+    if (isMeasuring) return;
+    isMeasuring = true;
+
+    // UIロック
+    btnBack.disabled = true;
+    btnSwitchCamera.disabled = true;
+    status.innerText = '録画・計測中...（3秒間）';
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const durationMs = 3000;
+    const startMs = performance.now();
+
+    let restLandmarks = null;
+    let maxLandmarks = null;
+    let maxMetric = -Infinity;
+    let maxFrameBitmapPromise = null;
+
+    const loop = (nowMs, resolve) => {
+        const elapsed = nowMs - startMs;
+
+        const results = faceLandmarker.detectForVideo(video, nowMs);
+        let landmarks = null;
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+            landmarks = results.faceLandmarks[0];
+
+            if (!restLandmarks) {
+                restLandmarks = cloneLandmarks(landmarks);
+            }
+
+            const metric = calcHenojiMetricPx(landmarks, w, h);
+            if (metric !== null && metric > maxMetric) {
+                maxMetric = metric;
+                maxLandmarks = cloneLandmarks(landmarks);
+                maxFrameBitmapPromise = captureVideoFrameBitmap(video, w, h);
+            }
+        }
+
+        drawHenojiTrackingDots(landmarks);
+
+        if (elapsed < durationMs) {
+            window.requestAnimationFrame((t) => loop(t, resolve));
+        } else {
+            resolve({ restLandmarks, maxLandmarks, maxFrameBitmapPromise });
+        }
+    };
+
+    try {
+        const { restLandmarks: rest, maxLandmarks: max, maxFrameBitmapPromise: bmpPromise } =
+            await new Promise((resolve) => window.requestAnimationFrame((t) => loop(t, resolve)));
+
+        if (!rest || !max) {
+            alert('顔が見つかりません。枠内に顔を入れてください。');
+            return;
+        }
+
+        const bitmap = bmpPromise ? await bmpPromise : await captureVideoFrameBitmap(video, w, h);
+        await renderHenojiResult(bitmap, rest, max);
 
     } finally {
         isMeasuring = false;
@@ -1335,6 +1577,8 @@ async function renderCheekResult(frameBitmap, restLandmarks, maxLandmarks, candi
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 async function renderWhistleResult(frameBitmap, restLandmarks, actLandmarks) {
@@ -1388,6 +1632,8 @@ async function renderWhistleResult(frameBitmap, restLandmarks, actLandmarks) {
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 async function renderWrinkleResult(frameBitmap, restLandmarks, maxLandmarks) {
@@ -1441,6 +1687,8 @@ async function renderWrinkleResult(frameBitmap, restLandmarks, maxLandmarks) {
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 async function renderNoseResult(frameBitmap, restLandmarks, maxLandmarks) {
@@ -1494,6 +1742,63 @@ async function renderNoseResult(frameBitmap, restLandmarks, maxLandmarks) {
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
+}
+
+async function renderHenojiResult(frameBitmap, restLandmarks, maxLandmarks) {
+    setResultViewMode('single');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const mmPerPx = calcMmPerPx(restLandmarks, w, h);
+
+    // 顔の傾き補正（虹彩中心を利用）
+    const il = maxLandmarks[CFG.ID.IRIS_L_CENTER];
+    const ir = maxLandmarks[CFG.ID.IRIS_R_CENTER];
+
+    const ix1 = il.x * w; const iy1 = il.y * h;
+    const ix2 = ir.x * w; const iy2 = ir.y * h;
+    const cx = (ix1 + ix2) / 2;
+    const cy = (iy1 + iy2) / 2;
+    const angleRad = Math.atan2(iy2 - iy1, ix2 - ix1);
+
+    ctx.save();
+
+    if (isFrontCamera) {
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+        ctx.translate(cx, cy);
+        ctx.rotate(angleRad);
+        ctx.translate(-cx, -cy);
+    } else {
+        ctx.translate(cx, cy);
+        ctx.rotate(angleRad);
+        ctx.translate(-cx, -cy);
+    }
+
+    ctx.drawImage(frameBitmap, 0, 0, w, h);
+
+    const resultData = currentEvaluator.evaluateAndDraw(restLandmarks, maxLandmarks, ctx, w, h, mmPerPx);
+
+    ctx.restore();
+
+    resultImg.src = canvas.toDataURL('image/png');
+    const avgScore = Math.round(resultData.total / resultData.count);
+    resultScore.innerText = avgScore;
+
+    resultDetails.innerHTML = '';
+    resultData.details.forEach(item => {
+        const row = document.createElement('tr');
+        const scoreCell = (item.score === undefined || item.score === null) ? '' : item.score;
+        row.innerHTML = `<td>${item.name}</td><td>${item.value}</td><td>${scoreCell}</td>`;
+        resultDetails.appendChild(row);
+    });
+
+    evalView.classList.add('hidden');
+    resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 function rotatePoint(p, origin, rad) {
@@ -1690,6 +1995,8 @@ async function renderLightCloseResult(frameBitmap, openLandmarks, closedLandmark
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 async function renderEeeResult(frameBitmap, restLandmarks, maxLandmarks) {
@@ -1746,6 +2053,8 @@ async function renderEeeResult(frameBitmap, restLandmarks, maxLandmarks) {
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 async function performWinkCapture() {
@@ -1912,6 +2221,8 @@ async function renderWinkFinalResult() {
 
     evalView.classList.add('hidden');
     resultView.classList.remove('hidden');
+    updateResultButtons();
+    updateAllProgress();
 }
 
 // カウントダウン処理
@@ -2013,6 +2324,8 @@ function performCapture() {
 
         evalView.classList.add('hidden');
         resultView.classList.remove('hidden');
+        updateResultButtons();
+        updateAllProgress();
 
     } else {
         alert("顔が見つかりません。枠内に顔を入れてください。");
@@ -2024,9 +2337,19 @@ function performCapture() {
 
 // 「再撮影」
 btnRetry.onclick = () => {
+    if (isAllModeActive()) {
+        resultView.classList.add('hidden');
+        showInstruction(currentMode);
+        updateAllProgress();
+        if (currentMode === 'wink') {
+            resetWinkState();
+        }
+        return;
+    }
+
     resultView.classList.add('hidden');
     evalView.classList.remove('hidden');
-    
+
     // キャンバスをクリアしてカメラ映像のみにする
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -2038,8 +2361,30 @@ btnRetry.onclick = () => {
     }
 };
 
+// 「次の項目へ」(通し評価)
+if (btnNext) {
+    btnNext.onclick = () => {
+        if (!isAllModeActive()) return;
+
+        const score = Number.parseInt(resultScore.innerText, 10) || 0;
+        sequenceManager.record(score);
+
+        const nextStep = sequenceManager.next();
+        if (nextStep) {
+            resultView.classList.add('hidden');
+            showInstruction(nextStep.id);
+            updateAllProgress();
+        } else {
+            showFinalResults();
+        }
+    };
+}
+
 // 「評価選択画面に戻る」
 btnHome.onclick = () => {
+    if (isAllModeActive()) {
+        sequenceManager.cancel();
+    }
     resultView.classList.add('hidden');
     menuView.classList.remove('hidden');
     
@@ -2050,7 +2395,23 @@ btnHome.onclick = () => {
     setGuideOverlayMode(null);
     resetWinkState();
     setResultViewMode('single');
+    updateAllProgress();
 };
+
+if (btnFinalHome) {
+    btnFinalHome.onclick = () => {
+        if (isAllModeActive()) {
+            sequenceManager.cancel();
+        }
+        finalView.classList.add('hidden');
+        menuView.classList.remove('hidden');
+        currentMode = null;
+        setGuideOverlayMode(null);
+        resetWinkState();
+        setResultViewMode('single');
+        updateAllProgress();
+    };
+}
 
 // アプリ起動
 init();

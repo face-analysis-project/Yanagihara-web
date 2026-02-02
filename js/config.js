@@ -47,6 +47,10 @@ export const CFG = {
     THRESH_NOSE_MM_4: 0.5,
     THRESH_NOSE_MM_2: 0.1,
 
+    // 口をへの字にする（Henoji）: 下降距離(mm) 閾値
+    THRESH_HENOJI_MM_4: 3.0,
+    THRESH_HENOJI_MM_2: 1.0,
+
     // ランドマークID (MediaPipe Face Mesh)
     ID: {
         EYE_L: 33, EYE_R: 263,      // 目尻

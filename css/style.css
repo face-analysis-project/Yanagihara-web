@@ -102,6 +102,13 @@ button:disabled {
     text-align: center;
 }
 
+.all-progress {
+    font-size: 0.85rem;
+    color: #9fd3ff;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
 /* 小さめのボタン（戻るボタンなど） */
 .small-btn {
     background: #444;
@@ -153,6 +160,7 @@ button:disabled {
 .menu-item[data-mode="wrinkle"],
 .menu-item[data-mode="eee"],
 .menu-item[data-mode="nose"],
+.menu-item[data-mode="henoji"],
 .menu-item[data-mode="cheek"],
 .menu-item[data-mode="whistle"],
 .menu-item[data-mode="blink-light"],
@@ -211,6 +219,10 @@ button:disabled {
     cursor: pointer;
     font-weight: bold;
     margin-top: 10px;
+}
+
+.btn-next {
+    background-color: #00a3ff;
 }
 .action-btn:hover {
     background-color: #0056b3;
