@@ -654,8 +654,8 @@ function drawNoseTrackingDots(landmarks) {
     if (!landmarks) return;
 
     const tip = getCoord(landmarks, CFG.ID.NOSE_TIP, w, h);
-    const wingL = getCoord(landmarks, CFG.ID.NOSE_WING_L, w, h);
-    const wingR = getCoord(landmarks, CFG.ID.NOSE_WING_R, w, h);
+    const wingL = getCoord(landmarks, CFG.ID.NOSE_INNER_L, w, h);
+    const wingR = getCoord(landmarks, CFG.ID.NOSE_INNER_R, w, h);
 
     const drawOne = (p, fill, stroke) => {
         ctx.fillStyle = fill;

@@ -63,12 +63,12 @@ export class NoseEvaluator {
      */
     evaluateAndDraw(restLandmarks, maxLandmarks, ctx, width, height, mmPerPx) {
         const restTip = getCoord(restLandmarks, CFG.ID.NOSE_TIP, width, height);
-        const restL = getCoord(restLandmarks, CFG.ID.NOSE_WING_L, width, height);
-        const restR = getCoord(restLandmarks, CFG.ID.NOSE_WING_R, width, height);
+        const restL = getCoord(restLandmarks, CFG.ID.NOSE_INNER_L, width, height);
+        const restR = getCoord(restLandmarks, CFG.ID.NOSE_INNER_R, width, height);
 
         const maxTip = getCoord(maxLandmarks, CFG.ID.NOSE_TIP, width, height);
-        const maxL = getCoord(maxLandmarks, CFG.ID.NOSE_WING_L, width, height);
-        const maxR = getCoord(maxLandmarks, CFG.ID.NOSE_WING_R, width, height);
+        const maxL = getCoord(maxLandmarks, CFG.ID.NOSE_INNER_L, width, height);
+        const maxR = getCoord(maxLandmarks, CFG.ID.NOSE_INNER_R, width, height);
 
         const restDL = Math.hypot(restL.x - restTip.x, restL.y - restTip.y);
         const restDR = Math.hypot(restR.x - restTip.x, restR.y - restTip.y);
@@ -93,6 +93,23 @@ export class NoseEvaluator {
         ctx.stroke();
         ctx.restore();
 
+        // 計測点: Rest→Max（強調・濃い青）
+        ctx.save();
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'deepskyblue';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(restL.x, restL.y, 5, 0, 2 * Math.PI);
+        ctx.arc(restR.x, restR.y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+
+        drawArrow(ctx, restL, maxL, 'deepskyblue');
+        drawArrow(ctx, restR, maxR, 'deepskyblue');
+
+        drawDot(ctx, maxL, 'deepskyblue', 5);
+        drawDot(ctx, maxR, 'deepskyblue', 5);
+
         // 矢印（Rest→Max）
         drawArrow(ctx, restL, maxL, 'cyan');
         drawArrow(ctx, restR, maxR, 'cyan');
@@ -107,8 +124,8 @@ export class NoseEvaluator {
         drawDot(ctx, maxTip, 'white', 4);
 
         const details = [
-            { name: '左鼻翼', value: `+ ${moveLmm.toFixed(1)} mm`, score: scoreL },
-            { name: '右鼻翼', value: `+ ${moveRmm.toFixed(1)} mm`, score: scoreR }
+            { name: '左鼻翼', value: `+ ${moveLmm.toFixed(1)} mm (id:${CFG.ID.NOSE_INNER_L})`, score: scoreL },
+            { name: '右鼻翼', value: `+ ${moveRmm.toFixed(1)} mm (id:${CFG.ID.NOSE_INNER_R})`, score: scoreR }
         ];
 
         return {
