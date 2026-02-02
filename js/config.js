@@ -35,6 +35,14 @@ export const CFG = {
     // 頬をふくらます: 左右比率(%) の閾値 [4点, 2点]
     THRESH_CHEEK_RATIO_PERCENT: [25, 15],
 
+    // 額のしわ寄せ（Wrinkle）: 眉の挙上距離(mm) 閾値
+    THRESH_WRINKLE_MM_4: 6.0,
+    THRESH_WRINKLE_MM_2: 3.0,
+
+    // 額のしわ寄せ（Wrinkle）: 左右比率(%) 閾値
+    THRESH_WRINKLE_RATIO_4: 70,
+    THRESH_WRINKLE_RATIO_2: 30,
+
     // ランドマークID (MediaPipe Face Mesh)
     ID: {
         EYE_L: 33, EYE_R: 263,      // 目尻
@@ -66,6 +74,10 @@ export const CFG = {
         EYE_R_UP: 159,
         EYE_R_LOW: 145,
         EYE_L_UP: 386,
-        EYE_L_LOW: 374
+        EYE_L_LOW: 374,
+
+        // 額のしわ寄せ（眉中央）
+        EYEBROW_L_CENTER: 105,
+        EYEBROW_R_CENTER: 334
     }
 };

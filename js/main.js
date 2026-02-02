@@ -7,6 +7,7 @@ import { LightCloseEvaluator } from './modules/eval_light_close.js';
 import { WinkEvaluator } from './modules/eval_wink.js';
 import { WhistleEvaluator } from './modules/eval_whistle.js';
 import { CheekEvaluator } from './modules/eval_cheek.js';
+import { WrinkleEvaluator } from './modules/eval_wrinkle.js';
 
 // === DOM要素の取得 ===
 const menuView = document.getElementById('menu-view');
@@ -191,7 +192,7 @@ const evaluators = {
     'wink': new WinkEvaluator(),
     'whistle': new WhistleEvaluator(),
     'cheek': new CheekEvaluator(),
-    // 'wrinkle': new WrinkleEvaluator(), // 今後追加
+    'wrinkle': new WrinkleEvaluator(),
 };
 
 const MODE_UI = {
@@ -212,6 +213,15 @@ const MODE_UI = {
             'そのまま3秒間キープし、終わったら力を抜いてください。'
         ],
         evalTitle: 'イー（歯を見せる）評価'
+    },
+    wrinkle: {
+        instructionTitle: '額のしわ寄せ評価の手順',
+        stepTexts: [
+            '「3・2・1」のカウントダウンのあと、',
+            '眉毛を上に向かって<span class="highlight">ぐっと持ち上げて</span>ください。',
+            'おでこにシワを寄せるイメージで驚いた表情を作ってください。'
+        ],
+        evalTitle: '額のしわ寄せ評価'
     },
     whistle: {
         instructionTitle: '口笛（口をすぼめる）評価の手順',
@@ -354,7 +364,7 @@ function setupMenu() {
         btn.onclick = () => {
             const mode = btn.dataset.mode;
             
-            if (mode === 'rest' || mode === 'eee' || mode === 'whistle' || mode === 'cheek' || mode === 'blink-light' || mode === 'blink-heavy' || mode === 'wink') {
+            if (mode === 'rest' || mode === 'eee' || mode === 'whistle' || mode === 'cheek' || mode === 'blink-light' || mode === 'blink-heavy' || mode === 'wink' || mode === 'wrinkle') {
                 showInstruction(mode);
             } else if (mode === 'all') {
                 alert("開発中: 通し評価モード");
@@ -493,6 +503,8 @@ btnAction.onclick = () => {
     startCountdown(3, () => {
         if (currentMode === 'eee') {
             performEeeCapture();
+        } else if (currentMode === 'wrinkle') {
+            performWrinkleCapture();
         } else if (currentMode === 'whistle') {
             performWhistleCapture();
         } else if (currentMode === 'cheek') {
@@ -579,6 +591,45 @@ function drawWhistleTrackingDots(landmarks) {
     ctx.fillStyle = 'white';
     ctx.beginPath();
     ctx.arc(nose.x, nose.y, 4, 0, 2 * Math.PI);
+    ctx.fill();
+}
+
+function drawWrinkleTrackingDots(landmarks) {
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    if (!landmarks) return;
+
+    const browL = getCoord(landmarks, CFG.ID.EYEBROW_L_CENTER, w, h);
+    const browR = getCoord(landmarks, CFG.ID.EYEBROW_R_CENTER, w, h);
+    const eyeL = getCoord(landmarks, CFG.ID.EYE_L_INNER, w, h);
+    const eyeR = getCoord(landmarks, CFG.ID.EYE_R_INNER, w, h);
+
+    const drawOne = (p, fill, stroke) => {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 7, 0, 2 * Math.PI);
+        ctx.fill();
+
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 9, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+    };
+
+    // 眉（赤）
+    drawOne(browL, 'red', 'yellow');
+    drawOne(browR, 'red', 'yellow');
+
+    // 目頭（白）
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(eyeL.x, eyeL.y, 4, 0, 2 * Math.PI);
+    ctx.arc(eyeR.x, eyeR.y, 4, 0, 2 * Math.PI);
     ctx.fill();
 }
 
@@ -734,6 +785,28 @@ function captureVideoFrameBitmap(videoEl, width, height) {
     return createImageBitmap(off);
 }
 
+function calcBrowElevMetricPx(landmarks, width, height) {
+    const il = landmarks[CFG.ID.IRIS_L_CENTER];
+    const ir = landmarks[CFG.ID.IRIS_R_CENTER];
+    if (!il || !ir) return null;
+
+    const ix1 = il.x * width; const iy1 = il.y * height;
+    const ix2 = ir.x * width; const iy2 = ir.y * height;
+    const cx = (ix1 + ix2) / 2;
+    const cy = (iy1 + iy2) / 2;
+    const angleRad = Math.atan2(iy2 - iy1, ix2 - ix1);
+    const origin = { x: cx, y: cy };
+
+    const browL = rotatePoint(getCoord(landmarks, CFG.ID.EYEBROW_L_CENTER, width, height), origin, -angleRad);
+    const browR = rotatePoint(getCoord(landmarks, CFG.ID.EYEBROW_R_CENTER, width, height), origin, -angleRad);
+    const eyeL = rotatePoint(getCoord(landmarks, CFG.ID.EYE_L_INNER, width, height), origin, -angleRad);
+    const eyeR = rotatePoint(getCoord(landmarks, CFG.ID.EYE_R_INNER, width, height), origin, -angleRad);
+
+    const distL = eyeL.y - browL.y;
+    const distR = eyeR.y - browR.y;
+    return (distL + distR) / 2;
+}
+
 async function performEeeCapture() {
     if (isMeasuring) return;
     isMeasuring = true;
@@ -808,6 +881,77 @@ async function performEeeCapture() {
         btnSwitchCamera.disabled = false;
         btnAction.disabled = false;
         // eval画面に戻った時に残像が出ないようクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        status.innerText = 'ガイド枠に顔を合わせてください';
+    }
+}
+
+async function performWrinkleCapture() {
+    if (isMeasuring) return;
+    isMeasuring = true;
+
+    // UIロック
+    btnBack.disabled = true;
+    btnSwitchCamera.disabled = true;
+    status.innerText = '録画・計測中...（3秒間）';
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const durationMs = 3000;
+    const startMs = performance.now();
+
+    let restLandmarks = null;
+    let maxLandmarks = null;
+    let maxMetric = -Infinity;
+    let maxFrameBitmapPromise = null;
+
+    const loop = (nowMs, resolve) => {
+        const elapsed = nowMs - startMs;
+
+        const results = faceLandmarker.detectForVideo(video, nowMs);
+        let landmarks = null;
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+            landmarks = results.faceLandmarks[0];
+
+            if (!restLandmarks) {
+                restLandmarks = cloneLandmarks(landmarks);
+            }
+
+            const metric = calcBrowElevMetricPx(landmarks, w, h);
+            if (metric !== null && metric > maxMetric) {
+                maxMetric = metric;
+                maxLandmarks = cloneLandmarks(landmarks);
+                maxFrameBitmapPromise = captureVideoFrameBitmap(video, w, h);
+            }
+        }
+
+        drawWrinkleTrackingDots(landmarks);
+
+        if (elapsed < durationMs) {
+            window.requestAnimationFrame((t) => loop(t, resolve));
+        } else {
+            resolve({ restLandmarks, maxLandmarks, maxFrameBitmapPromise });
+        }
+    };
+
+    try {
+        const { restLandmarks: rest, maxLandmarks: max, maxFrameBitmapPromise: bmpPromise } =
+            await new Promise((resolve) => window.requestAnimationFrame((t) => loop(t, resolve)));
+
+        if (!rest || !max) {
+            alert('顔が見つかりません。枠内に顔を入れてください。');
+            return;
+        }
+
+        const bitmap = bmpPromise ? await bmpPromise : await captureVideoFrameBitmap(video, w, h);
+        await renderWrinkleResult(bitmap, rest, max);
+
+    } finally {
+        isMeasuring = false;
+        btnBack.disabled = false;
+        btnSwitchCamera.disabled = false;
+        btnAction.disabled = false;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         status.innerText = 'ガイド枠に顔を合わせてください';
     }
@@ -1103,6 +1247,59 @@ async function renderWhistleResult(frameBitmap, restLandmarks, actLandmarks) {
     ctx.drawImage(frameBitmap, 0, 0, w, h);
 
     const resultData = currentEvaluator.evaluateAndDraw(restLandmarks, actLandmarks, ctx, w, h, mmPerPx);
+
+    ctx.restore();
+
+    resultImg.src = canvas.toDataURL('image/png');
+    const avgScore = Math.round(resultData.total / resultData.count);
+    resultScore.innerText = avgScore;
+
+    resultDetails.innerHTML = '';
+    resultData.details.forEach(item => {
+        const row = document.createElement('tr');
+        const scoreCell = (item.score === undefined || item.score === null) ? '' : item.score;
+        row.innerHTML = `<td>${item.name}</td><td>${item.value}</td><td>${scoreCell}</td>`;
+        resultDetails.appendChild(row);
+    });
+
+    evalView.classList.add('hidden');
+    resultView.classList.remove('hidden');
+}
+
+async function renderWrinkleResult(frameBitmap, restLandmarks, maxLandmarks) {
+    setResultViewMode('single');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const mmPerPx = calcMmPerPx(restLandmarks, w, h);
+
+    // 顔の傾き補正（虹彩中心を利用）
+    const il = maxLandmarks[CFG.ID.IRIS_L_CENTER];
+    const ir = maxLandmarks[CFG.ID.IRIS_R_CENTER];
+
+    const ix1 = il.x * w; const iy1 = il.y * h;
+    const ix2 = ir.x * w; const iy2 = ir.y * h;
+    const cx = (ix1 + ix2) / 2;
+    const cy = (iy1 + iy2) / 2;
+    const angleRad = Math.atan2(iy2 - iy1, ix2 - ix1);
+
+    ctx.save();
+
+    if (isFrontCamera) {
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+        ctx.translate(cx, cy);
+        ctx.rotate(angleRad);
+        ctx.translate(-cx, -cy);
+    } else {
+        ctx.translate(cx, cy);
+        ctx.rotate(angleRad);
+        ctx.translate(-cx, -cy);
+    }
+
+    ctx.drawImage(frameBitmap, 0, 0, w, h);
+
+    const resultData = currentEvaluator.evaluateAndDraw(restLandmarks, maxLandmarks, ctx, w, h, mmPerPx);
 
     ctx.restore();
 
