@@ -299,5 +299,6 @@ Max抽出（`performCheekCapture()`）:
 - 2026/01/15: 安静時評価、外カメラ対応、自動水平補正の追加
 - 2026/01/20: 7項目（rest / blink-light / blink-heavy / wink / cheek / whistle / eee）の実装とREADME更新
 - 2026/02/02: 10項目+通し評価の実装とREADME更新
+- 2026/02/20: github repository を変更。face-analysis-project oganizationを作成。
 
 ---
