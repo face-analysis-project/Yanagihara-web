@@ -2450,11 +2450,14 @@ if (btnFinalHome) {
 
 // 2026/03/30 ishida修正
 const btnCsv = document.getElementById('btn-csv');
+// CSVボタンの処理を更新
 if (btnCsv) {
     btnCsv.onclick = () => {
-        if (sequenceManager) {
-            sequenceManager.exportToCSV();
-        }
+        // 画面の入力欄からIDを取得。空なら「未入力」とする
+        const patientIdInput = document.getElementById('patient-id');
+        const patientId = patientIdInput.value.trim() || "未入力";
+        
+        sequenceManager.exportToCSV(patientId);
     };
 }
 // ここまで追加
@@ -2465,6 +2468,53 @@ if (btnPdf) {
         pdfGenerator.generateReport(sequenceManager.results, total);
     };
 }
+
+// 追加：単独テスト用CSVエクスポート機能
+const btnCsvSingle = document.getElementById('btn-csv-single');
+if (btnCsvSingle) {
+    btnCsvSingle.onclick = () => {
+        // 1. 患者IDと基本情報の取得
+        const patientIdInput = document.getElementById('patient-id');
+        const patientId = patientIdInput ? (patientIdInput.value.trim() || "未入力") : "未入力";
+        const now = new Date();
+        const timestamp = now.toLocaleString('ja-JP').replace(/,/g, '');
+        
+        // 2. テスト項目名とスコアの取得
+        const testName = document.getElementById('current-title').innerText || "単独テスト";
+        const resultScore = document.getElementById('result-score');
+        const score = resultScore ? resultScore.innerText : "0";
+
+        // 3. ヘッダーとデータ行の初期化
+        const headers = ["患者ID", "日時", "テスト項目", "スコア"];
+        const dataRow = [patientId, timestamp, testName, score];
+
+        // 4. 生データの取得と展開（すでに修正済みの collectResultDetails を再利用！）
+        const details = collectResultDetails();
+        details.forEach(detail => {
+            headers.push(detail.label);
+            dataRow.push(detail.value);
+        });
+
+        // 5. CSV文字列の作成とBOM付与
+        const csvContent = headers.join(",") + "\n" + dataRow.join(",");
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        
+        // 6. ダウンロード実行（ファイル名に患者IDとテスト項目名を含める）
+        const link = document.createElement("a");
+        const fileNameId = patientId.replace(/[\/\\?%*:|"<>]/g, '-');
+        const dateStr = now.toISOString().split('T')[0];
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `yanagihara_${fileNameId}_${testName}_${dateStr}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+}
+// ここまで追加
 
 // アプリ起動
 init();

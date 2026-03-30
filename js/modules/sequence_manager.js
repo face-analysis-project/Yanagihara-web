@@ -56,56 +56,47 @@ export class SequenceManager {
     }
 
     // ここから追加: Wide FormatでのCSVエクスポート機能
-    exportToCSV() {
-        if (!this.results || this.results.length === 0) {
-            alert("エクスポートするデータがありません。");
-            return;
-        }
+    exportToCSV(patientId) {
+        const now = new Date();
+        const timestamp = now.toLocaleString();
+        
+        // ヘッダーの先頭に「患者ID」を追加
+        const headers = ["患者ID", "日時", "合計スコア"];
+        // データ行の先頭に実際の ID を追加
+        const dataRow = [patientId, timestamp, this.totalScore()];
 
-        // 1. ヘッダー（1行目）とデータ（2行目）の初期化
-        const headers = ['日時', '合計スコア'];
-        const dataRow = [
-            new Date().toLocaleString('ja-JP').replace(/,/g, ''), // 日時 (カンマが含まれるとCSVが壊れるため削除)
-            this.totalScore()                                     // 総合点
-        ];
-
-        // 2. 各テスト項目のスコアと生データ（details）を横に展開 (Wide format)
         this.results.forEach(result => {
-            if (!result) return;
-            
-            const prefix = result.name; // 例: "安静時"
+            if (result) {
+                const prefix = result.name;
+                headers.push(`${prefix}_スコア`);
+                dataRow.push(result.score);
 
-            // 該当項目のスコアカラム
-            headers.push(`${prefix}_スコア`);
-            dataRow.push(result.score);
-
-            // 該当項目の生データカラム (MediaPipeのmmや%などの計測値)
-            if (result.details && result.details.length > 0) {
                 result.details.forEach(detail => {
-                    // label(例: "左右差(mm)") と value を取得して列を追加
                     headers.push(`${prefix}_${detail.label}`);
                     dataRow.push(detail.value);
                 });
             }
         });
 
-        // 3. CSV文字列の結合
-        const csvContent = headers.join(',') + '\n' + dataRow.join(',');
+        const csvContent = [
+            headers.join(","),
+            dataRow.join(",")
+        ].join("\n");
 
-        // 4. Blobを用いたダウンロード処理 (※BOMを付与してExcelの文字化けを防ぐ)
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
         
-        const a = document.createElement('a');
-        a.href = url;
-        // ファイル名を日付入りにする
-        a.download = `yanagihara_result_${new Date().toISOString().slice(0,10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
+        // ファイル名にIDを組み込む（お医者さんが管理しやすくなる！）
+        const fileNameId = patientId.replace(/[/\\?%*:|"<>]/g, '-'); // 記号を安全な文字に置換
+        const dateStr = now.toISOString().split('T')[0];
+        link.setAttribute("href", url);
+        link.setAttribute("download", `yanagihara_${fileNameId}_${dateStr}.csv`);
         
-        // メモリ解放
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 } // <-- クラスの閉じカッコ
