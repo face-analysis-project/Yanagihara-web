@@ -261,7 +261,12 @@ function collectResultDetails() {
     const rows = Array.from(resultDetails.querySelectorAll('tr'));
     return rows.map(row => {
         const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent?.trim() ?? '');
-        return cells.filter(Boolean).join(' ');
+        
+        // 変更箇所：文字列に潰さず、CSVが読み取れる「箱（オブジェクト）」として返す
+        return {
+            label: cells[0] || '不明な項目', // テーブルの1列目（項目名）
+            value: cells[1] || ''          // テーブルの2列目（計測値の生データ）
+        };
     });
 }
 
@@ -2442,6 +2447,17 @@ if (btnFinalHome) {
         updateAllProgress();
     };
 }
+
+// 2026/03/30 ishida修正
+const btnCsv = document.getElementById('btn-csv');
+if (btnCsv) {
+    btnCsv.onclick = () => {
+        if (sequenceManager) {
+            sequenceManager.exportToCSV();
+        }
+    };
+}
+// ここまで追加
 
 if (btnPdf) {
     btnPdf.onclick = () => {
