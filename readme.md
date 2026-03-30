@@ -308,5 +308,3 @@ Max抽出（`performCheekCapture()`）:
 - 2026/02/20: github repository を変更。face-analysis-project oganizationを作成。
 
 ---
-
-test
