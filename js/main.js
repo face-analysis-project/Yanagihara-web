@@ -2600,38 +2600,64 @@ function exportToExcel(patientId, testName, score, detailsArray) {
         XLSX.utils.book_append_sheet(wb, ws2, "全履歴データベース");
 
         // ==========================================
-        // 【シート3以降】各評価項目ごとの個別履歴
+        // 【シート3以降】各評価項目ごとの個別履歴（順番を固定）
         // ==========================================
-        const testTypes = new Set(history.map(h => h.testName));
-        
-        testTypes.forEach(type => {
-            if (type === "通し評価" || type === "全ての項目") return;
-            
-            const typeHistory = history.filter(h => h.testName === type || h.testName === "通し評価" || h.testName === "全ての項目");
-            if (typeHistory.length === 0) return;
+        // 柳原法の評価項目順にシートを作成するため、配列で順番を固定します
+        const evalCategories = [
+            "安静時",
+            "額のしわ寄せ",
+            "軽い閉眼",
+            "強い閉眼",
+            "片目つぶり",
+            "鼻翼を動かす",
+            "頬をふくらます",
+            "口笛",
+            "イーと歯を見せる",
+            "口をへの字に"
+        ];
 
+        evalCategories.forEach(category => {
+            // この項目の履歴（単独テスト、または通し評価）を抽出
+            const categoryHistory = history.filter(h => h.testName === category || h.testName === "通し評価" || h.testName === "全ての項目");
+
+            // 列（ヘッダー）の項目名を集める
             const typeKeys = new Set();
-            typeHistory.forEach(h => {
-                if(h.details) {
+            categoryHistory.forEach(h => {
+                if (h.details) {
                     Object.keys(h.details).forEach(k => {
-                        if(k.includes(type) || h.testName === type) typeKeys.add(k); 
+                        // 単独テストのデータか、キー名にカテゴリ名が含まれる場合に追加
+                        if (h.testName === category || k.includes(category)) {
+                            typeKeys.add(k);
+                        }
                     });
                 }
             });
 
+            // ご指定の条件のヘッダーを作成：患者ID, 検査日時, 検査種別, スコア(合計/項目), 詳細計測値
             const specificHeaders = ["患者ID", "検査日時", "検査種別", "スコア", ...Array.from(typeKeys)];
             const sheetData = [specificHeaders];
 
-            typeHistory.forEach(h => {
-                const row = [h.patientId, h.date, h.testName, h.testName === type ? h.score : "参照"];
+            // 履歴データを行として追加
+            categoryHistory.forEach(h => {
+                // 通し評価の場合は、単独スコアが存在しないため「通し評価内参照」等とする
+                const scoreValue = (h.testName === category) ? h.score : "通し評価内参照";
+                
+                // 行データのベースを作成
+                const row = [h.patientId, h.date, h.testName, scoreValue];
+                
+                // 詳細スコア（計測値）を横に追加
                 Array.from(typeKeys).forEach(key => {
-                    row.push(h.details[key] || "-");
+                    row.push(h.details[key] !== undefined ? h.details[key] : "-");
                 });
+                
                 sheetData.push(row);
             });
 
+            // シートを作成して追加（履歴が0件の項目でも、空のシートとして順番通りに必ず作成されます）
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
-            const safeSheetName = type.substring(0, 30);
+            
+            // Excelのシート名は最大31文字の制限があるため安全対策
+            const safeSheetName = category.substring(0, 31);
             XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
         });
 
