@@ -2514,7 +2514,178 @@ if (btnCsvSingle) {
         document.body.removeChild(link);
     };
 }
-// ここまで追加
+
+// ==========================================
+// 新規追加：履歴保存とExcel出力機能
+// ==========================================
+
+// 1. テスト結果をブラウザに保存する関数
+function saveToHistory(patientId, testName, score, details) {
+    // 過去の履歴を読み込む（なければ空の配列）
+    let history = JSON.parse(localStorage.getItem('yanagihara_history') || '[]');
+    
+    const now = new Date();
+    const timestamp = now.toLocaleString('ja-JP').replace(/,/g, '');
+    
+    // 今回の記録データを作成
+    const currentRecord = {
+        patientId: patientId,
+        date: timestamp,
+        testName: testName,
+        score: score,
+        details: {} // 生データを格納
+    };
+
+    // 詳細データ（配列）を扱いやすい辞書型（Key-Value）に変換
+    details.forEach(detail => {
+        currentRecord.details[detail.label] = detail.value;
+    });
+
+    // 履歴に追加して保存
+    history.push(currentRecord);
+    localStorage.setItem('yanagihara_history', JSON.stringify(history));
+
+    return { currentRecord, history };
+}
+
+// 2. Excelファイルを作成してダウンロードする関数
+function exportToExcel(patientId, testName, score, detailsArray) {
+    try {
+        // ① まず履歴に保存し、現在の記録と全履歴を取得
+        const { currentRecord, history } = saveToHistory(patientId, testName, score, detailsArray);
+
+        // 新しいExcelの「箱（ワークブック）」を作成
+        const wb = XLSX.utils.book_new();
+
+        // ==========================================
+        // 【シート1】今回の基本情報と結果
+        // ==========================================
+        const sheet1Data = [
+            ["【患者基本情報】"],
+            ["患者ID", currentRecord.patientId],
+            ["検査日時", currentRecord.date],
+            ["検査種別", currentRecord.testName],
+            ["合計スコア", `${currentRecord.score} 点`],
+            [],
+            ["【詳細データ】"],
+            ["計測項目", "計測値"]
+        ];
+        // 詳細データを縦に追加
+        currentRecord.details && Object.keys(currentRecord.details).forEach(key => {
+            sheet1Data.push([key, currentRecord.details[key]]);
+        });
+        const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+        XLSX.utils.book_append_sheet(wb, ws1, "今回結果(基本情報)");
+
+        // ==========================================
+        // 【シート2】全項目の履歴データベース（横並び）
+        // ==========================================
+        const allDetailKeys = new Set();
+        history.forEach(h => {
+            if(h.details) Object.keys(h.details).forEach(k => allDetailKeys.add(k));
+        });
+        const detailHeaders = Array.from(allDetailKeys);
+        
+        const sheet2Headers = ["患者ID", "検査日時", "検査種別", "合計スコア", ...detailHeaders];
+        const sheet2Data = [sheet2Headers];
+
+        history.forEach(h => {
+            const row = [h.patientId, h.date, h.testName, h.score];
+            detailHeaders.forEach(key => {
+                row.push(h.details[key] || "-");
+            });
+            sheet2Data.push(row);
+        });
+        const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+        XLSX.utils.book_append_sheet(wb, ws2, "全履歴データベース");
+
+        // ==========================================
+        // 【シート3以降】各評価項目ごとの個別履歴
+        // ==========================================
+        const testTypes = new Set(history.map(h => h.testName));
+        
+        testTypes.forEach(type => {
+            if (type === "通し評価" || type === "全ての項目") return;
+            
+            const typeHistory = history.filter(h => h.testName === type || h.testName === "通し評価" || h.testName === "全ての項目");
+            if (typeHistory.length === 0) return;
+
+            const typeKeys = new Set();
+            typeHistory.forEach(h => {
+                if(h.details) {
+                    Object.keys(h.details).forEach(k => {
+                        if(k.includes(type) || h.testName === type) typeKeys.add(k); 
+                    });
+                }
+            });
+
+            const specificHeaders = ["患者ID", "検査日時", "検査種別", "スコア", ...Array.from(typeKeys)];
+            const sheetData = [specificHeaders];
+
+            typeHistory.forEach(h => {
+                const row = [h.patientId, h.date, h.testName, h.testName === type ? h.score : "参照"];
+                Array.from(typeKeys).forEach(key => {
+                    row.push(h.details[key] || "-");
+                });
+                sheetData.push(row);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            const safeSheetName = type.substring(0, 30);
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+        });
+
+        // ==========================================
+        // 4. Excelファイルのダウンロード実行
+        // ==========================================
+        const now = new Date(); // ← 【重要】前回追加した現在時刻の取得
+        const fileNameId = patientId.replace(/[\/\\?%*:|"<>]/g, '-');
+        const dateStr = now.toISOString().split('T')[0];
+        
+        XLSX.writeFile(wb, `yanagihara_${fileNameId}_${dateStr}.xlsx`);
+        
+    } catch (error) {
+        // エラーが起きたら、画面にポップアップを出して原因を知らせる！
+        console.error("Excel出力エラー:", error);
+        alert("Excel作成中にエラーが発生しました！\n原因: " + error.message);
+    }
+}
+
+// 単独テストのExcel出力ボタン
+const btnExcelSingle = document.getElementById('btn-excel-single');
+if (btnExcelSingle) {
+    btnExcelSingle.onclick = () => {
+        const patientId = document.getElementById('patient-id') ? (document.getElementById('patient-id').value.trim() || "未入力") : "未入力";
+        const testName = document.getElementById('current-title').innerText || "単独テスト";
+        const score = document.getElementById('result-score') ? document.getElementById('result-score').innerText : "0";
+        const details = collectResultDetails(); // 既存の取得関数を再利用！
+        
+        exportToExcel(patientId, testName, score, details);
+    };
+}
+
+// 通し評価のExcel出力ボタン
+const btnExcelAll = document.getElementById('btn-excel');
+if (btnExcelAll) {
+    btnExcelAll.onclick = () => {
+        const patientId = document.getElementById('patient-id') ? (document.getElementById('patient-id').value.trim() || "未入力") : "未入力";
+        const testName = "通し評価";
+        const score = sequenceManager.totalScore();
+        
+        // sequenceManagerから詳細データを平坦な配列にして抽出
+        const details = [];
+        sequenceManager.results.forEach(result => {
+            if (result) {
+                details.push({ label: `${result.name}_スコア`, value: result.score });
+                result.details.forEach(d => {
+                    details.push({ label: `${result.name}_${d.label}`, value: d.value });
+                });
+            }
+        });
+
+        exportToExcel(patientId, testName, score, details);
+    };
+}
 
 // アプリ起動
 init();

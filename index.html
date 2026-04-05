@@ -121,6 +121,7 @@
         </div>
 
         <button id="btn-csv-single" class="action-btn btn-next">この結果をCSVで保存</button>
+        <button id="btn-excel-single" class="action-btn btn-home" style="background: #217346; border-color: #217346; margin-bottom: 15px;">この結果をExcelで保存</button>
 
         <button id="btn-next" class="action-btn btn-next hidden">次の項目へ</button>
         <button id="btn-home" class="action-btn btn-home">評価選択画面に戻る</button>
@@ -148,9 +149,8 @@
             </table>
         </div>
         
-        <!-- 2026/03/30 ishida修正 -->
-        <button id="btn-csv" class="action-btn btn-next">CSVデータをダウンロード</button>
-        <!-- ここまで追加 -->
+        <button id="btn-csv" class="action-btn">CSV形式でダウンロード</button>
+        <button id="btn-excel" class="action-btn" style="background: #217346; border-color: #217346; margin-top: 10px;">Excel形式でダウンロード（履歴含む）</button>
 
         <button id="btn-pdf" class="action-btn btn-next hidden">PDFレポートをダウンロード</button>
         <button id="btn-final-home" class="action-btn btn-home">評価選択画面に戻る</button>
@@ -159,6 +159,8 @@
     <div id="pdf-root" class="pdf-root"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
