@@ -2551,6 +2551,7 @@ function saveToHistory(patientId, testName, score, details) {
 // 2. Excelファイルを作成してダウンロードする関数
 function exportToExcel(patientId, testName, score, detailsArray) {
     try {
+        
         // ① まず履歴に保存し、現在の記録と全履歴を取得
         const { currentRecord, history } = saveToHistory(patientId, testName, score, detailsArray);
 
@@ -2558,24 +2559,64 @@ function exportToExcel(patientId, testName, score, detailsArray) {
         const wb = XLSX.utils.book_new();
 
         // ==========================================
-        // 【シート1】今回の基本情報と結果
+        // 【シート1】今回の評価結果（縦並びフォーマット）
         // ==========================================
-        const sheet1Data = [
-            ["【患者基本情報】"],
-            ["患者ID", currentRecord.patientId],
-            ["検査日時", currentRecord.date],
-            ["検査種別", currentRecord.testName],
-            ["合計スコア", `${currentRecord.score} 点`],
-            [],
-            ["【詳細データ】"],
-            ["計測項目", "計測値"]
+        const sheet1Data = [];
+        
+        // --- 基本情報 ---
+        sheet1Data.push(["患者ID", patientId]);
+        sheet1Data.push(["検査日時", now.toLocaleString()]);
+        sheet1Data.push(["検査種別", testName]);
+        sheet1Data.push(["総合スコア", score]);
+        sheet1Data.push(["", ""]); // 空行で区切る
+
+        // --- 詳細データ（写真のような縦並びレイアウト） ---
+        const orderedCategories = [
+            "安静時",
+            "額のしわ寄せ",
+            "軽い閉眼",
+            "強い閉眼",
+            "片目つぶり",
+            "鼻翼を動かす",
+            "頬をふくらます",
+            "口笛",
+            "イーと歯を見せる",
+            "口をへの字に"
         ];
-        // 詳細データを縦に追加
-        currentRecord.details && Object.keys(currentRecord.details).forEach(key => {
-            sheet1Data.push([key, currentRecord.details[key]]);
-        });
+
+        if (details) {
+            orderedCategories.forEach(category => {
+                // detailsの中から、このカテゴリ名が含まれるキーを探す（例: "安静時_目尻の高さ"）
+                const relatedKeys = Object.keys(details).filter(key => key.includes(category));
+                
+                // 今回のテスト種別がこのカテゴリと一致する、または関連データが存在する場合に出力
+                if (testName === category || relatedKeys.length > 0) {
+                    // 見出し行（例: 【安静時】）
+                    sheet1Data.push([`【${category}】`, ""]); 
+                    
+                    // 単独テストの場合は、スコアをここに挿入
+                    if (testName === category && !relatedKeys.includes(`${category}_スコア`)) {
+                        sheet1Data.push([`${category}_スコア`, score]);
+                    }
+
+                    // 詳細な計測値を縦に並べる
+                    relatedKeys.forEach(key => {
+                        sheet1Data.push([key, details[key]]);
+                    });
+                    
+                    // 次の項目との間を見やすくするために空行を入れる
+                    sheet1Data.push(["", ""]); 
+                }
+            });
+        }
+
+        // 2次元配列（縦並びデータ）からシート1を作成
         const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
-        XLSX.utils.book_append_sheet(wb, ws1, "今回結果(基本情報)");
+        
+        // A列（項目名）の幅を少し広げて見やすくするオプション（おまけ）
+        ws1['!cols'] = [{ wch: 25 }, { wch: 20 }];
+
+        XLSX.utils.book_append_sheet(wb, ws1, "今回結果");
 
         // ==========================================
         // 【シート2】全項目の履歴データベース（横並び）
