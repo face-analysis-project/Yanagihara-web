@@ -2551,19 +2551,17 @@ function saveToHistory(patientId, testName, score, details) {
 // 2. Excelファイルを作成してダウンロードする関数
 function exportToExcel(patientId, testName, score, detailsArray) {
     try {
+        console.log("exportToExcel called with:", { patientId, testName, score, detailsArray });
         
-        // ① まず履歴に保存し、現在の記録と全履歴を取得
-        const { currentRecord, history } = saveToHistory(patientId, testName, score, detailsArray);
+        // ここで一番最初に現在時刻を取得
+        const now = new Date(); 
 
-        // 新しいExcelの「箱（ワークブック）」を作成
+        const { currentRecord, history } = saveToHistory(patientId, testName, score, detailsArray);
+        
         const wb = XLSX.utils.book_new();
 
-        // ==========================================
-        // 【シート1】今回の評価結果（縦並びフォーマット）
-        // ==========================================
+        // シート1: 今回の評価結果（縦並び）
         const sheet1Data = [];
-        
-        // --- 基本情報 ---
         sheet1Data.push(["患者ID", patientId]);
         sheet1Data.push(["検査日時", now.toLocaleString()]);
         sheet1Data.push(["検査種別", testName]);
@@ -2584,24 +2582,25 @@ function exportToExcel(patientId, testName, score, detailsArray) {
             "口をへの字に"
         ];
 
-        if (details) {
+        if (detailsArray && detailsArray.length > 0) {
             orderedCategories.forEach(category => {
-                // detailsの中から、このカテゴリ名が含まれるキーを探す（例: "安静時_目尻の高さ"）
-                const relatedKeys = Object.keys(details).filter(key => key.includes(category));
+                // detailsArray（配列）の中から、このカテゴリ名が含まれる要素を探す
+                const relatedDetails = detailsArray.filter(detail => detail.label && detail.label.includes(category));
                 
                 // 今回のテスト種別がこのカテゴリと一致する、または関連データが存在する場合に出力
-                if (testName === category || relatedKeys.length > 0) {
+                if (testName === category || relatedDetails.length > 0) {
                     // 見出し行（例: 【安静時】）
                     sheet1Data.push([`【${category}】`, ""]); 
                     
                     // 単独テストの場合は、スコアをここに挿入
-                    if (testName === category && !relatedKeys.includes(`${category}_スコア`)) {
+                    const hasScoreInDetails = relatedDetails.some(d => d.label === `${category}_スコア`);
+                    if (testName === category && !hasScoreInDetails) {
                         sheet1Data.push([`${category}_スコア`, score]);
                     }
 
                     // 詳細な計測値を縦に並べる
-                    relatedKeys.forEach(key => {
-                        sheet1Data.push([key, details[key]]);
+                    relatedDetails.forEach(detail => {
+                        sheet1Data.push([detail.label, detail.value]);
                     });
                     
                     // 次の項目との間を見やすくするために空行を入れる
@@ -2643,7 +2642,7 @@ function exportToExcel(patientId, testName, score, detailsArray) {
         // ==========================================
         // 【シート3以降】各評価項目ごとの個別履歴（順番を固定）
         // ==========================================
-        // 柳原法の評価項目順にシートを作成するため、配列で順番を固定します
+        // 柳原法の評価項目順にシートを作成するため、配列で順番を固定
         const evalCategories = [
             "安静時",
             "額のしわ寄せ",
@@ -2694,7 +2693,7 @@ function exportToExcel(patientId, testName, score, detailsArray) {
                 sheetData.push(row);
             });
 
-            // シートを作成して追加（履歴が0件の項目でも、空のシートとして順番通りに必ず作成されます）
+            // シートを作成して追加（履歴が0件の項目でも、空のシートとして順番通りに必ず作成）
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
             
             // Excelのシート名は最大31文字の制限があるため安全対策
@@ -2705,14 +2704,14 @@ function exportToExcel(patientId, testName, score, detailsArray) {
         // ==========================================
         // 4. Excelファイルのダウンロード実行
         // ==========================================
-        const now = new Date(); // ← 【重要】前回追加した現在時刻の取得
+        // const now = new Date(); // ← 【重要】前回追加した現在時刻の取得
         const fileNameId = patientId.replace(/[\/\\?%*:|"<>]/g, '-');
         const dateStr = now.toISOString().split('T')[0];
         
         XLSX.writeFile(wb, `yanagihara_${fileNameId}_${dateStr}.xlsx`);
         
     } catch (error) {
-        // エラーが起きたら、画面にポップアップを出して原因を知らせる！
+        // エラーが起きたら、画面にポップアップを出して原因を知らせる
         console.error("Excel出力エラー:", error);
         alert("Excel作成中にエラーが発生しました！\n原因: " + error.message);
     }
