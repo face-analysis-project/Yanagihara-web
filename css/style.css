@@ -198,7 +198,6 @@ button:disabled {
 .menu-item.special {
     grid-column: 1 / -1; 
     margin-bottom: 10px; 
-    
 }
 
 /* === 説明画面のデザイン === */
@@ -423,7 +422,6 @@ video, canvas {
         height: 18%;
     }
 }
-
 
 /* === カウントダウンのデザイン === */
 #countdown-overlay {

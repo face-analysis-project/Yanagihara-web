@@ -261,7 +261,12 @@ function collectResultDetails() {
     const rows = Array.from(resultDetails.querySelectorAll('tr'));
     return rows.map(row => {
         const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent?.trim() ?? '');
-        return cells.filter(Boolean).join(' ');
+        
+        // 変更箇所：文字列に潰さず、CSVが読み取れる「箱（オブジェクト）」として返す
+        return {
+            label: cells[0] || '不明な項目', // テーブルの1列目（項目名）
+            value: cells[1] || ''          // テーブルの2列目（計測値の生データ）
+        };
     });
 }
 
@@ -2443,10 +2448,308 @@ if (btnFinalHome) {
     };
 }
 
+// 2026/03/30 ishida修正
+const btnCsv = document.getElementById('btn-csv');
+// CSVボタンの処理を更新
+if (btnCsv) {
+    btnCsv.onclick = () => {
+        // 画面の入力欄からIDを取得。空なら「未入力」とする
+        const patientIdInput = document.getElementById('patient-id');
+        const patientId = patientIdInput.value.trim() || "未入力";
+        
+        sequenceManager.exportToCSV(patientId);
+    };
+}
+// ここまで追加
+
 if (btnPdf) {
     btnPdf.onclick = () => {
         const total = sequenceManager.totalScore();
         pdfGenerator.generateReport(sequenceManager.results, total);
+    };
+}
+
+// 追加：単独テスト用CSVエクスポート機能
+const btnCsvSingle = document.getElementById('btn-csv-single');
+if (btnCsvSingle) {
+    btnCsvSingle.onclick = () => {
+        // 1. 患者IDと基本情報の取得
+        const patientIdInput = document.getElementById('patient-id');
+        const patientId = patientIdInput ? (patientIdInput.value.trim() || "未入力") : "未入力";
+        const now = new Date();
+        const timestamp = now.toLocaleString('ja-JP').replace(/,/g, '');
+        
+        // 2. テスト項目名とスコアの取得
+        const testName = document.getElementById('current-title').innerText || "単独テスト";
+        const resultScore = document.getElementById('result-score');
+        const score = resultScore ? resultScore.innerText : "0";
+
+        // 3. ヘッダーとデータ行の初期化
+        const headers = ["患者ID", "日時", "テスト項目", "スコア"];
+        const dataRow = [patientId, timestamp, testName, score];
+
+        // 4. 生データの取得と展開（すでに修正済みの collectResultDetails を再利用！）
+        const details = collectResultDetails();
+        details.forEach(detail => {
+            headers.push(detail.label);
+            dataRow.push(detail.value);
+        });
+
+        // 5. CSV文字列の作成とBOM付与
+        const csvContent = headers.join(",") + "\n" + dataRow.join(",");
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        
+        // 6. ダウンロード実行（ファイル名に患者IDとテスト項目名を含める）
+        const link = document.createElement("a");
+        const fileNameId = patientId.replace(/[\/\\?%*:|"<>]/g, '-');
+        const dateStr = now.toISOString().split('T')[0];
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `yanagihara_${fileNameId}_${testName}_${dateStr}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+}
+
+// ==========================================
+// 新規追加：履歴保存とExcel出力機能
+// ==========================================
+
+// 1. テスト結果をブラウザに保存する関数
+function saveToHistory(patientId, testName, score, details) {
+    // 過去の履歴を読み込む（なければ空の配列）
+    let history = JSON.parse(localStorage.getItem('yanagihara_history') || '[]');
+    
+    const now = new Date();
+    const timestamp = now.toLocaleString('ja-JP').replace(/,/g, '');
+    
+    // 今回の記録データを作成
+    const currentRecord = {
+        patientId: patientId,
+        date: timestamp,
+        testName: testName,
+        score: score,
+        details: {} // 生データを格納
+    };
+
+    // 詳細データ（配列）を扱いやすい辞書型（Key-Value）に変換
+    details.forEach(detail => {
+        currentRecord.details[detail.label] = detail.value;
+    });
+
+    // 履歴に追加して保存
+    history.push(currentRecord);
+    localStorage.setItem('yanagihara_history', JSON.stringify(history));
+
+    return { currentRecord, history };
+}
+
+// 2. Excelファイルを作成してダウンロードする関数
+function exportToExcel(patientId, testName, score, detailsArray) {
+    try {
+        console.log("exportToExcel called with:", { patientId, testName, score, detailsArray });
+        
+        // ここで一番最初に現在時刻を取得
+        const now = new Date(); 
+
+        const { currentRecord, history } = saveToHistory(patientId, testName, score, detailsArray);
+        
+        const wb = XLSX.utils.book_new();
+
+        // シート1: 今回の評価結果（縦並び）
+        const sheet1Data = [];
+        sheet1Data.push(["患者ID", patientId]);
+        sheet1Data.push(["検査日時", now.toLocaleString()]);
+        sheet1Data.push(["検査種別", testName]);
+        sheet1Data.push(["総合スコア", score]);
+        sheet1Data.push(["", ""]); // 空行で区切る
+
+        // --- 詳細データ（写真のような縦並びレイアウト） ---
+        const orderedCategories = [
+            "安静時",
+            "額のしわ寄せ",
+            "軽い閉眼",
+            "強い閉眼",
+            "片目つぶり",
+            "鼻翼を動かす",
+            "頬をふくらます",
+            "口笛",
+            "イーと歯を見せる",
+            "口をへの字に"
+        ];
+
+        if (detailsArray && detailsArray.length > 0) {
+            orderedCategories.forEach(category => {
+                // detailsArray（配列）の中から、このカテゴリ名が含まれる要素を探す
+                const relatedDetails = detailsArray.filter(detail => detail.label && detail.label.includes(category));
+                
+                // 今回のテスト種別がこのカテゴリと一致する、または関連データが存在する場合に出力
+                if (testName === category || relatedDetails.length > 0) {
+                    // 見出し行（例: 【安静時】）
+                    sheet1Data.push([`【${category}】`, ""]); 
+                    
+                    // 単独テストの場合は、スコアをここに挿入
+                    const hasScoreInDetails = relatedDetails.some(d => d.label === `${category}_スコア`);
+                    if (testName === category && !hasScoreInDetails) {
+                        sheet1Data.push([`${category}_スコア`, score]);
+                    }
+
+                    // 詳細な計測値を縦に並べる
+                    relatedDetails.forEach(detail => {
+                        sheet1Data.push([detail.label, detail.value]);
+                    });
+                    
+                    // 次の項目との間を見やすくするために空行を入れる
+                    sheet1Data.push(["", ""]); 
+                }
+            });
+        }
+
+        // 2次元配列（縦並びデータ）からシート1を作成
+        const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+        
+        // A列（項目名）の幅を少し広げて見やすくするオプション（おまけ）
+        ws1['!cols'] = [{ wch: 25 }, { wch: 20 }];
+
+        XLSX.utils.book_append_sheet(wb, ws1, "今回結果");
+
+        // ==========================================
+        // 【シート2】全項目の履歴データベース（横並び）
+        // ==========================================
+        const allDetailKeys = new Set();
+        history.forEach(h => {
+            if(h.details) Object.keys(h.details).forEach(k => allDetailKeys.add(k));
+        });
+        const detailHeaders = Array.from(allDetailKeys);
+        
+        const sheet2Headers = ["患者ID", "検査日時", "検査種別", "合計スコア", ...detailHeaders];
+        const sheet2Data = [sheet2Headers];
+
+        history.forEach(h => {
+            const row = [h.patientId, h.date, h.testName, h.score];
+            detailHeaders.forEach(key => {
+                row.push(h.details[key] || "-");
+            });
+            sheet2Data.push(row);
+        });
+        const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+        XLSX.utils.book_append_sheet(wb, ws2, "全履歴データベース");
+
+        // ==========================================
+        // 【シート3以降】各評価項目ごとの個別履歴（順番を固定）
+        // ==========================================
+        // 柳原法の評価項目順にシートを作成するため、配列で順番を固定
+        const evalCategories = [
+            "安静時",
+            "額のしわ寄せ",
+            "軽い閉眼",
+            "強い閉眼",
+            "片目つぶり",
+            "鼻翼を動かす",
+            "頬をふくらます",
+            "口笛",
+            "イーと歯を見せる",
+            "口をへの字に"
+        ];
+
+        evalCategories.forEach(category => {
+            // この項目の履歴（単独テスト、または通し評価）を抽出
+            const categoryHistory = history.filter(h => h.testName === category || h.testName === "通し評価" || h.testName === "全ての項目");
+
+            // 列（ヘッダー）の項目名を集める
+            const typeKeys = new Set();
+            categoryHistory.forEach(h => {
+                if (h.details) {
+                    Object.keys(h.details).forEach(k => {
+                        // 単独テストのデータか、キー名にカテゴリ名が含まれる場合に追加
+                        if (h.testName === category || k.includes(category)) {
+                            typeKeys.add(k);
+                        }
+                    });
+                }
+            });
+
+            // ご指定の条件のヘッダーを作成：患者ID, 検査日時, 検査種別, スコア(合計/項目), 詳細計測値
+            const specificHeaders = ["患者ID", "検査日時", "検査種別", "スコア", ...Array.from(typeKeys)];
+            const sheetData = [specificHeaders];
+
+            // 履歴データを行として追加
+            categoryHistory.forEach(h => {
+                // 通し評価の場合は、単独スコアが存在しないため「通し評価内参照」等とする
+                const scoreValue = (h.testName === category) ? h.score : "通し評価内参照";
+                
+                // 行データのベースを作成
+                const row = [h.patientId, h.date, h.testName, scoreValue];
+                
+                // 詳細スコア（計測値）を横に追加
+                Array.from(typeKeys).forEach(key => {
+                    row.push(h.details[key] !== undefined ? h.details[key] : "-");
+                });
+                
+                sheetData.push(row);
+            });
+
+            // シートを作成して追加（履歴が0件の項目でも、空のシートとして順番通りに必ず作成）
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            
+            // Excelのシート名は最大31文字の制限があるため安全対策
+            const safeSheetName = category.substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+        });
+
+        // ==========================================
+        // 4. Excelファイルのダウンロード実行
+        // ==========================================
+        // const now = new Date(); // ← 【重要】前回追加した現在時刻の取得
+        const fileNameId = patientId.replace(/[\/\\?%*:|"<>]/g, '-');
+        const dateStr = now.toISOString().split('T')[0];
+        
+        XLSX.writeFile(wb, `yanagihara_${fileNameId}_${dateStr}.xlsx`);
+        
+    } catch (error) {
+        // エラーが起きたら、画面にポップアップを出して原因を知らせる
+        console.error("Excel出力エラー:", error);
+        alert("Excel作成中にエラーが発生しました！\n原因: " + error.message);
+    }
+}
+
+// 単独テストのExcel出力ボタン
+const btnExcelSingle = document.getElementById('btn-excel-single');
+if (btnExcelSingle) {
+    btnExcelSingle.onclick = () => {
+        const patientId = document.getElementById('patient-id') ? (document.getElementById('patient-id').value.trim() || "未入力") : "未入力";
+        const testName = document.getElementById('current-title').innerText || "単独テスト";
+        const score = document.getElementById('result-score') ? document.getElementById('result-score').innerText : "0";
+        const details = collectResultDetails(); // 既存の取得関数を再利用！
+        
+        exportToExcel(patientId, testName, score, details);
+    };
+}
+
+// 通し評価のExcel出力ボタン
+const btnExcelAll = document.getElementById('btn-excel');
+if (btnExcelAll) {
+    btnExcelAll.onclick = () => {
+        const patientId = document.getElementById('patient-id') ? (document.getElementById('patient-id').value.trim() || "未入力") : "未入力";
+        const testName = "通し評価";
+        const score = sequenceManager.totalScore();
+        
+        // sequenceManagerから詳細データを平坦な配列にして抽出
+        const details = [];
+        sequenceManager.results.forEach(result => {
+            if (result) {
+                details.push({ label: `${result.name}_スコア`, value: result.score });
+                result.details.forEach(d => {
+                    details.push({ label: `${result.name}_${d.label}`, value: d.value });
+                });
+            }
+        });
+
+        exportToExcel(patientId, testName, score, details);
     };
 }
 
