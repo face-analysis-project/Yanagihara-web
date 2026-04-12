@@ -307,5 +307,6 @@ Max抽出（`performCheekCapture()`）:
 - 2026/02/02: 10項目+通し評価の実装とREADME更新
 - 2026/02/20: github repository を変更。face-analysis-project oganizationを作成。
 - 2026/03/30: code owner を設定。
+- 2026/04/12: 新しい顔面評価手法を実装開始(feature/new-method)
 
 ---
