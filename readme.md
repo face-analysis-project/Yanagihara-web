@@ -306,5 +306,6 @@ Max抽出（`performCheekCapture()`）:
 - 2026/01/20: 7項目（rest / blink-light / blink-heavy / wink / cheek / whistle / eee）の実装とREADME更新
 - 2026/02/02: 10項目+通し評価の実装とREADME更新
 - 2026/02/20: github repository を変更。face-analysis-project oganizationを作成。
+- 2026/03/30: code owner を設定。
 
 ---
